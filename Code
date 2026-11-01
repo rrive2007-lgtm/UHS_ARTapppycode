@@ -1,0 +1,105 @@
+import streamlit as st
+from PIL import Image
+from io import BytesIO
+from pathlib import Path
+
+st.set_page_config(page_title="Union High School — Student Art Wall", page_icon="🎨", layout="wide")
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap');
+.stApp{background:#faf9f7;color:#171717}
+.block-container{max-width:1250px;padding-top:1.5rem}
+h1,h2,h3{font-family:'Playfair Display',Georgia,serif}
+.red{color:#df1733;font-style:italic}
+.hero{background:#171717;color:white;padding:clamp(25px,5vw,65px);margin:18px 0 40px}
+.hero h1{color:white;font-size:clamp(38px,5vw,64px);line-height:1.04}
+.hero p{color:#d2d0ce;max-width:560px}
+.label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:#77736f}
+.empty{background:#f1eee8;border:1px solid #e6e1db;padding:28px}
+div.stButton>button,div.stFormSubmitButton>button{background:#df1733;color:white;border:0;border-radius:0;font-weight:700}
+div.stButton>button:hover,div.stFormSubmitButton>button:hover{background:#bd1028;color:white}
+</style>
+""", unsafe_allow_html=True)
+
+logo = Path(__file__).parent / "union-logo.png"
+head1, head2 = st.columns([1, 12], vertical_alignment="center")
+with head1:
+    if logo.exists():
+        st.image(str(logo), width=48)
+with head2:
+    st.markdown("**Union High School**  \n<span style='font-size:10px;color:#77736f;letter-spacing:.12em'>STUDENT ART WALL · ROSEHILL, NC</span>", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="hero">
+<div style="font-size:10px;letter-spacing:.16em">🔴 &nbsp; A STUDENT GALLERY CONCEPT</div>
+<h1>Made here.<br><span class="red">Shared with pride.</span></h1>
+<p>A place for Union students to show the art they make. Put your work out there under an artist name you choose.</p>
+<p>◇ &nbsp; No real name needed. Keep your personal details private.</p>
+</div>
+""", unsafe_allow_html=True)
+
+gallery, submit, rules = st.tabs(["The gallery", "Share your art", "Community rules"])
+if "artworks" not in st.session_state:
+    st.session_state.artworks = []
+
+with gallery:
+    st.markdown('<div class="label">THE GALLERY</div>', unsafe_allow_html=True)
+    st.markdown('<h2>The wall starts<br>with <span class="red">you.</span></h2>', unsafe_allow_html=True)
+    st.write("A spot for sketches, photos, paintings, and ideas made by Union students.")
+    if not st.session_state.artworks:
+        st.markdown('<div class="empty"><div class="label" style="color:#df1733">NO ARTWORKS YET</div><h3>Every gallery has a first piece.</h3><p>Choose a favorite work and preview how it could look on the wall.</p></div>', unsafe_allow_html=True)
+        st.info("Use the **Share your art** tab to add a preview.")
+    else:
+        cols = st.columns(3)
+        for i, art in enumerate(reversed(st.session_state.artworks)):
+            with cols[i % 3]:
+                st.image(art["image"], use_container_width=True)
+                st.subheader(art["title"])
+                st.caption("By " + art["artist"])
+
+with submit:
+    left, right = st.columns([0.85, 1.15], gap="large")
+    with left:
+        st.markdown('<div class="label">YOUR TURN</div>', unsafe_allow_html=True)
+        st.markdown('<h2>Put your<br><span class="red">work on the wall.</span></h2>', unsafe_allow_html=True)
+        st.write("Pick an image and tell us what to call you. Use an artist name or nickname instead of your real name.")
+        st.warning("Please don't add your real name, phone number, or other personal details.")
+    with right:
+        st.subheader("01  Add your artwork")
+        st.caption("PREVIEW ONLY")
+        with st.form("artwork_form", clear_on_submit=True):
+            upload = st.file_uploader("Choose a JPG, PNG, or WEBP image (max 10 MB)", type=["jpg","jpeg","png","webp"])
+            title = st.text_input("Artwork title (optional)", max_chars=70, placeholder="Give it a name")
+            artist = st.text_input("Artist name (optional)", max_chars=40, placeholder="Nickname or artist name")
+            consent = st.checkbox("I made this artwork or have permission to share it, and it follows the community rules.")
+            go = st.form_submit_button("Preview my artwork →", use_container_width=True)
+        if go:
+            if not upload:
+                st.error("Choose an image first.")
+            elif upload.size > 10 * 1024 * 1024:
+                st.error("Please choose an image under 10 MB.")
+            elif not consent:
+                st.error("Please confirm permission to share this artwork.")
+            else:
+                try:
+                    image = Image.open(BytesIO(upload.getvalue())).convert("RGB")
+                    st.session_state.artworks.append({"image": image.copy(), "title": title.strip() or "Untitled artwork", "artist": artist.strip() or "Anonymous artist"})
+                    st.success("Preview added. Open the gallery tab to see it.")
+                except Exception:
+                    st.error("Could not read that image. Try another one.")
+        st.caption("Demo only: uploads are not saved permanently or shared with other visitors.")
+
+with rules:
+    st.markdown('<div class="label">A GOOD WALL MAKES ROOM FOR EVERYONE</div>', unsafe_allow_html=True)
+    st.markdown('<h2>Keep it creative.<br><span class="red">Keep it respectful.</span></h2>', unsafe_allow_html=True)
+    a, b = st.columns(2)
+    with a:
+        st.markdown("**01 · Make it yours to share.**\n\nPost work you created or have permission to share.")
+        st.markdown("**03 · Respect people's privacy.**\n\nUse an artist name and leave out private information.")
+    with b:
+        st.markdown("**02 · No violence or illegal material.**\n\nDon't post content promoting threats or illegal activity.")
+        st.markdown("**04 · Make space for classmates.**\n\nNo harassment or content that targets another person.")
+    st.info("This is a concept demo, not a live school submission service. The school should review and approve any public gallery before launch.")
+
+st.markdown("---")
+st.caption("Union High School · Student Art Wall concept · Student privacy comes first.")
